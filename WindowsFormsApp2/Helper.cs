@@ -1,6 +1,10 @@
-﻿namespace WindowsFormsApp2
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace WindowsFormsApp2
 {
-    internal class Knoten
+    internal class Knoten : IComparable<Knoten>
     {
         public int X { get; private set; }
         public int Y { get; private set; }
@@ -34,6 +38,55 @@
         public override string ToString()
         {
             return X + "," + Y;
+        }
+
+        public int CompareTo(Knoten other)
+        {
+            return Distance.CompareTo(other.Distance);
+        }
+
+        public List<Knoten> GetSuccessor()
+        {
+            var rv = new List<Knoten>();
+
+            AddSuccessor(North, rv);
+            AddSuccessor(East, rv);
+            AddSuccessor(South, rv);
+            AddSuccessor(West, rv);
+
+            return rv;
+        }
+
+        private void AddSuccessor(Knoten knoten, List<Knoten> liste)
+        {
+            if (knoten != null && knoten.Pred == this)
+                liste.Add(knoten);
+        }
+
+        public List<Knoten> GetNeighbors(List<Knoten> list)
+        {
+            var rv = new List<Knoten>();
+
+            AddToNeighbors(rv, North, list);
+            AddToNeighbors(rv, East, list);
+            AddToNeighbors(rv, South, list);
+            AddToNeighbors(rv, West, list);
+
+            return rv;
+        }
+
+        private void AddToNeighbors(List<Knoten> add, Knoten knoten, List<Knoten> check)
+        {
+            if (knoten != null && knoten.Pred != this && !check.Contains(knoten))
+                add.Add(knoten);
+        }
+    }
+
+    internal class KnotenComparer : IComparer<Knoten>
+    {
+        public int Compare(Knoten x, Knoten y)
+        {
+            return x.Distance.CompareTo(y.Distance);
         }
     }
 

@@ -29,10 +29,6 @@ namespace WindowsFormsApp2
 
             middleX = GraphView.Size.Width / 2;
             middleY = GraphView.Size.Height / 2;
-
-            //RemoveAt(1, 1);
-            //RemoveAt(3, 1);
-            //RemoveAt(2, 1);
         }
 
         private void CalculateDistance(int x, int y)
@@ -46,35 +42,22 @@ namespace WindowsFormsApp2
             {
                 var current = toCheck.Dequeue();
 
-                if (current.North != null && !toCheck.Contains(current.North) && !added.Contains(current.North))
-                {
-                    current.North.Pred = current;
-                    current.North.Distance = current.Distance + 1;
-                    toCheck.Enqueue(current.North);
-                }
-
-                if (current.East != null && !toCheck.Contains(current.East) && !added.Contains(current.East))
-                {
-                    current.East.Pred = current;
-                    current.East.Distance = current.Distance + 1;
-                    toCheck.Enqueue(current.East);
-                }
-
-                if (current.South != null && !toCheck.Contains(current.South) && !added.Contains(current.South))
-                {
-                    current.South.Pred = current;
-                    current.South.Distance = current.Distance + 1;
-                    toCheck.Enqueue(current.South);
-                }
-
-                if (current.West != null && !toCheck.Contains(current.West) && !added.Contains(current.West))
-                {
-                    current.West.Pred = current;
-                    current.West.Distance = current.Distance + 1;
-                    toCheck.Enqueue(current.West);
-                }
+                CheckNeighbor(current.North, current, toCheck, added);
+                CheckNeighbor(current.East, current, toCheck, added);
+                CheckNeighbor(current.South, current, toCheck, added);
+                CheckNeighbor(current.West, current, toCheck, added);
 
                 added.Add(current);
+            }
+        }
+
+        private void CheckNeighbor(Knoten node, Knoten me, Queue<Knoten> queue, HashSet<Knoten> hashSet)
+        {
+            if (node != null && !queue.Contains(node) && !hashSet.Contains(node))
+            {
+                node.Pred = me;
+                node.Distance = me.Distance + 1;
+                queue.Enqueue(node);
             }
         }
 
@@ -85,17 +68,37 @@ namespace WindowsFormsApp2
             {
                 knoten.Distance = -1;
 
-                if (knoten.North != null && knoten.North.Pred == knoten)
-                    Recalculate(knoten.North);
+                if (knoten.North != null)
+                {
+                    knoten.North.South = null;
 
-                if (knoten.East != null && knoten.East.Pred == knoten)
-                    Recalculate(knoten.East);
+                    if (knoten.North.Pred == knoten)
+                        Recalculate(knoten.North);
+                }
 
-                if (knoten.South != null && knoten.South.Pred == knoten)
-                    Recalculate(knoten.South);
+                if (knoten.East != null)
+                {
+                    knoten.East.West = null;
 
-                if (knoten.West != null && knoten.West.Pred == knoten)
-                    Recalculate(knoten.West);
+                    if (knoten.East.Pred == knoten)
+                        Recalculate(knoten.East);
+                }
+
+                if (knoten.South != null)
+                {
+                    knoten.South.North = null;
+
+                    if (knoten.South.Pred == knoten)
+                        Recalculate(knoten.South);
+                }
+
+                if (knoten.West != null)
+                {
+                    knoten.West.East = null;
+
+                    if (knoten.West.Pred == knoten)
+                        Recalculate(knoten.West);
+                }
             }
         }
 
@@ -103,52 +106,97 @@ namespace WindowsFormsApp2
         {
             var distance = int.MaxValue;
             Knoten pred = null;
+            List<Knoten> possible = new List<Knoten>();
 
-            if (knoten.North != null)
+            CheckNeighbor(knoten.North, knoten, possible, ref distance, ref pred);
+            CheckNeighbor(knoten.East, knoten, possible, ref distance, ref pred);
+            CheckNeighbor(knoten.South, knoten, possible, ref distance, ref pred);
+            CheckNeighbor(knoten.West, knoten, possible, ref distance, ref pred);
+
+            if (possible.Count > 0 && pred == null)
             {
-                if (knoten.North.Distance >= 0 && knoten.North.Distance < distance && knoten.North.Pred != knoten)
+                possible.Sort();
+                List<Knoten> circle = new List<Knoten>();
+                circle.Add(knoten);
+
+                do
                 {
-                    pred = knoten.North;
-                    distance = knoten.North.Distance;
-                }
-            }
+                    var node = possible.First(); possible.RemoveAt(0);
 
-            if (knoten.East != null)
-            {
-                if (knoten.East.Distance >= 0 && knoten.East.Distance < distance && knoten.East.Pred != knoten)
-                {
-                    pred = knoten.East;
-                    distance = knoten.East.Distance;
-                }
-            }
 
-            if (knoten.South != null)
-            {
-                if (knoten.South.Distance >= 0 && knoten.South.Distance < distance && knoten.South.Pred != knoten)
-                {
-                    pred = knoten.South;
-                    distance = knoten.South.Distance;
-                }
-            }
+                    if (RecalculateRecursive(node, circle))
+                    {
+                        knoten.Pred = node;
+                        knoten.Distance = node.Distance + 1;
 
-            if (knoten.West != null)
-            {
-                if (knoten.West.Distance >= 0 && knoten.West.Distance < distance && knoten.West.Pred != knoten)
-                {
-                    pred = knoten.West;
-                    distance = knoten.West.Distance;
-                }
-            }
+                        AdjustDistance(knoten);
 
-            if (pred != null)
-            {
-                knoten.Pred = pred;
-                knoten.Distance = distance + 1;
+                        return;
+                    }
+
+                } while (possible.Count > 0);
+
+                // Wir sind wohl Disconnected
             }
             else
             {
-                knoten.Pred = null;
-                knoten.Distance = -2;
+                if (pred != null)
+                {
+                    knoten.Pred = pred;
+                    knoten.Distance = distance + 1;
+
+                    AdjustDistance(knoten);
+                }
+                else
+                {
+                    knoten.Pred = null;
+                    knoten.Distance = -2;
+                }
+            }
+        }
+
+        private void AdjustDistance(Knoten knoten)
+        {
+            foreach (var succ in knoten.GetSuccessor())
+            {
+                succ.Distance = knoten.Distance + 1;
+                AdjustDistance(succ);
+            }
+        }
+
+        private bool RecalculateRecursive(Knoten knoten, List<Knoten> circle)
+        {
+            var foo = knoten.GetNeighbors(circle);
+
+            if (foo.Count == 0)
+            {
+                return false;
+            }
+            else
+            {
+                foo.Sort();
+                var best = foo.First(); foo.RemoveAt(0);
+
+                knoten.Pred = best;
+                knoten.Distance = best.Distance + 1;
+            }
+
+            return true;
+        }
+
+        private void CheckNeighbor(Knoten other, Knoten me, List<Knoten> set, ref int dist, ref Knoten pred)
+        {
+            if (other == null)
+                return;
+
+            if (other.Pred == me)
+            {
+                set.Add(other);
+            }
+            else if (other.Distance >= 0 && other.Distance < dist)
+            {
+                pred = other;
+                dist = other.Distance;
             }
         }
 
@@ -267,8 +315,12 @@ namespace WindowsFormsApp2
 
                 var point = IndexToPoint(i);
 
-                g.DrawEllipse(p, point.X - pointRadius, point.Y - pointRadius, 2* pointRadius, 2* pointRadius);
-                g.FillEllipse(sb, point.X - pointRadius, point.Y - pointRadius, 2* pointRadius, 2* pointRadius);
+                var x = point.X - pointRadius;
+                var y = point.Y - pointRadius;
+
+                g.DrawEllipse(p, x, y, 2* pointRadius, 2* pointRadius);
+                g.FillEllipse(sb, x, y, 2* pointRadius, 2* pointRadius);
+                g.DrawString(Graph[i].Distance.ToString(), Font, sb, new Point(point.X + 3, point.Y + 3));
             }
         }
 
