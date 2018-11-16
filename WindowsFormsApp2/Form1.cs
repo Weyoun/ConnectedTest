@@ -113,7 +113,15 @@ namespace WindowsFormsApp2
             CheckNeighbor(knoten.South, knoten, possible, ref distance, ref pred);
             CheckNeighbor(knoten.West, knoten, possible, ref distance, ref pred);
 
-            if (possible.Count > 0 && pred == null)
+
+            if (pred != null)
+            {
+                knoten.Pred = pred;
+                knoten.Distance = distance + 1;
+
+                AdjustDistance(knoten);
+            }
+            else if (possible.Count > 0)
             {
                 possible.Sort();
                 List<Knoten> circle = new List<Knoten>();
@@ -121,7 +129,7 @@ namespace WindowsFormsApp2
 
                 do
                 {
-                    var node = possible.First(); possible.RemoveAt(0);
+                    var node = possible.Pop();
 
 
                     if (RecalculateRecursive(node, circle))
@@ -137,21 +145,23 @@ namespace WindowsFormsApp2
                 } while (possible.Count > 0);
 
                 // Wir sind wohl Disconnected
+                knoten.Pred = null;
+                SetDisconnected(knoten);
             }
             else
             {
-                if (pred != null)
-                {
-                    knoten.Pred = pred;
-                    knoten.Distance = distance + 1;
+                knoten.Pred = null;
+                SetDisconnected(knoten);
+            }
+        }
 
-                    AdjustDistance(knoten);
-                }
-                else
-                {
-                    knoten.Pred = null;
-                    knoten.Distance = -2;
-                }
+        private void SetDisconnected(Knoten knoten)
+        {
+            knoten.Distance = -2;
+
+            foreach (var other in knoten.GetAllNeighbors())
+            {
+                SetDisconnected(other);
             }
         }
 
@@ -166,16 +176,32 @@ namespace WindowsFormsApp2
 
         private bool RecalculateRecursive(Knoten knoten, List<Knoten> circle)
         {
+            circle.Add(knoten);
             var foo = knoten.GetNeighbors(circle);
 
             if (foo.Count == 0)
             {
+                var succ = knoten.GetSuccessor();
+
+                while (succ.Count > 0)
+                {
+                    var current = succ.Pop();
+
+                    if (RecalculateRecursive(current, circle))
+                    {
+                        knoten.Pred = current;
+                        knoten.Distance = current.Distance + 1;
+
+                        return true;
+                    }
+                }
+
                 return false;
             }
             else
             {
                 foo.Sort();
-                var best = foo.First(); foo.RemoveAt(0);
+                var best = foo.First();
 
                 knoten.Pred = best;
                 knoten.Distance = best.Distance + 1;

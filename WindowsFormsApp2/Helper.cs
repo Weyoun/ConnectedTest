@@ -80,6 +80,24 @@ namespace WindowsFormsApp2
             if (knoten != null && knoten.Pred != this && !check.Contains(knoten))
                 add.Add(knoten);
         }
+
+        public List<Knoten> GetAllNeighbors()
+        {
+            var list = new List<Knoten>();
+
+            AddToAllNeighbors(North, list);
+            AddToAllNeighbors(East, list);
+            AddToAllNeighbors(South, list);
+            AddToAllNeighbors(West, list);
+
+            return list;
+        }
+
+        private void AddToAllNeighbors(Knoten knoten, List<Knoten> add)
+        {
+            if (knoten != null && knoten.Distance >= 0)
+                add.Add(knoten);
+        }
     }
 
     internal class KnotenComparer : IComparer<Knoten>
@@ -118,6 +136,13 @@ namespace WindowsFormsApp2
             pred = node.Pred;
 
             return true;
+        }
+
+        internal static Knoten Pop(this List<Knoten> list)
+        {
+            var knoten = list.First();
+            list.RemoveAt(0);
+            return knoten;
         }
     }
 }
