@@ -103,62 +103,13 @@ namespace WindowsFormsApp2
 
         private void Recalculate(Knoten knoten)
         {
-            var circle = new List<Knoten>();
+            var circle = new HashSet<Knoten>(10);
 
             if (!RecalculateRecursive(knoten, circle))
             {
                 knoten.Pred = null;
                 SetDisconnected(knoten);
             }
-
-            //var distance = int.MaxValue;
-            //Knoten pred = null;
-            //List<Knoten> possible = new List<Knoten>();
-
-            //CheckNeighbor(knoten.North, knoten, possible, ref distance, ref pred);
-            //CheckNeighbor(knoten.East, knoten, possible, ref distance, ref pred);
-            //CheckNeighbor(knoten.South, knoten, possible, ref distance, ref pred);
-            //CheckNeighbor(knoten.West, knoten, possible, ref distance, ref pred);
-
-
-            //if (pred != null)
-            //{
-            //    knoten.Pred = pred;
-            //    knoten.Distance = distance + 1;
-
-            //    AdjustDistance(knoten);
-            //}
-            //else if (possible.Count > 0)
-            //{
-            //    possible.Sort();
-            //    List<Knoten> circle = new List<Knoten>();
-            //    circle.Add(knoten);
-
-            //    do
-            //    {
-            //        var node = possible.Pop();
-
-            //        if (RecalculateRecursive(node, circle))
-            //        {
-            //            knoten.Pred = node;
-            //            knoten.Distance = node.Distance + 1;
-
-            //            //AdjustDistance(knoten);
-
-            //            return;
-            //        }
-
-            //    } while (possible.Count > 0);
-
-            //    // Wir sind wohl Disconnected
-            //    knoten.Pred = null;
-            //    SetDisconnected(knoten);
-            //}
-            //else
-            //{
-            //    knoten.Pred = null;
-            //    SetDisconnected(knoten);
-            //}
         }
 
         private void SetDisconnected(Knoten knoten)
@@ -183,7 +134,7 @@ namespace WindowsFormsApp2
             }
         }
 
-        private bool RecalculateRecursive(Knoten knoten, List<Knoten> circle)
+        private bool RecalculateRecursive(Knoten knoten, HashSet<Knoten> circle)
         {
             recalculating++;
 
@@ -223,7 +174,7 @@ namespace WindowsFormsApp2
             return false;
         }
 
-        private bool IsCricle(Knoten current, List<Knoten> list)
+        private bool IsCricle(Knoten current, HashSet<Knoten> list)
         {
             if (current == null)
                 return false;

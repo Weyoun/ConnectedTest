@@ -62,7 +62,7 @@ namespace WindowsFormsApp2
                 liste.Add(knoten);
         }
 
-        public List<Knoten> GetNeighbors(List<Knoten> list)
+        public List<Knoten> GetNeighbors(HashSet<Knoten> list)
         {
             var rv = new List<Knoten>();
 
@@ -74,7 +74,7 @@ namespace WindowsFormsApp2
             return rv;
         }
 
-        private void AddToNeighbors(List<Knoten> add, Knoten knoten, List<Knoten> check)
+        private void AddToNeighbors(List<Knoten> add, Knoten knoten, HashSet<Knoten> check)
         {
             if (knoten != null && knoten.Pred != this && !check.Contains(knoten))
                 add.Add(knoten);
