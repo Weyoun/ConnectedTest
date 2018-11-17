@@ -12,20 +12,19 @@ namespace WindowsFormsApp2
         public Knoten Pred { get; set; }
         public int Distance { get; set; }
 
-        private readonly int zeilen, spalten;
+        private readonly int width;
 
         public Knoten North { get; set; }
         public Knoten East { get; set; }
         public Knoten South { get; set; }
         public Knoten West { get; set; }
 
-        public Knoten(int x, int y, int z, int s)
+        public Knoten(int x, int y, int z)
         {
             X = x;
             Y = y;
-            zeilen = z;
-            spalten = s;
-            Index = x * zeilen + y;
+            width = z;
+            Index = y * width + x;
             Pred = null;
             Distance = 0;
         }
@@ -127,7 +126,7 @@ namespace WindowsFormsApp2
     {
         internal static bool TryGetAt(this Knoten[] graph, int x, int y, int zeilen, out Knoten knoten)
         {
-            var index = x * zeilen + y;
+            var index = y * zeilen + x;
             knoten = null;
 
             if (graph[index] != null)

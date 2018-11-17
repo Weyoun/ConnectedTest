@@ -13,8 +13,8 @@ namespace WindowsFormsApp2
 
     public partial class Form1 : Form
     {
-        int zeilen = 10;
-        int spalten = 10;
+        int width = 9;
+        int height = 9;
         Knoten[] Graph;
 
         int middleX, middleY;
@@ -27,7 +27,7 @@ namespace WindowsFormsApp2
             InitializeComponent();
             Init();
 
-            centreOfGraph = new Point(zeilen / 2, spalten / 2);
+            centreOfGraph = new Point(width / 2, height / 2);
             CalculateDistance(centreOfGraph.X, centreOfGraph.Y);
 
             middleX = GraphView.Size.Width / 2;
@@ -39,7 +39,7 @@ namespace WindowsFormsApp2
             Queue<Knoten> toCheck = new Queue<Knoten>();
             HashSet<Knoten> added = new HashSet<Knoten>();
 
-            toCheck.Enqueue(Graph[x * spalten + y]);
+            toCheck.Enqueue(Graph[y * width + x]);
 
             while (toCheck.Count > 0)
             {
@@ -67,7 +67,7 @@ namespace WindowsFormsApp2
         private void RemoveAt(int x, int y)
         {
 
-            if (Graph.TryGetAt(x, y, zeilen, out Knoten knoten))
+            if (Graph.TryGetAt(x, y, width, out Knoten knoten))
             {
                 knoten.Distance = -1;
                 knoten.RemoveLinks();
@@ -253,34 +253,26 @@ namespace WindowsFormsApp2
 
         private void Init()
         {
-            Graph = new Knoten[zeilen*spalten];
+            Graph = new Knoten[width*height];
 
-            for (int i = 0; i < zeilen; i++)
+            for (int y = 0; y < height; y++)
             {
-                for (int j = 0; j < spalten; j++)
+                for (int x = 0; x < width; x++)
                 {
-                    var knot = new Knoten(i, j, zeilen, spalten);
+                    var knot = new Knoten(x, y, width);
                     Graph[knot.Index] = knot;
-                }
-            }
 
-            for (int i = 0; i < zeilen; i++)
-            {
-                for (int j = 0; j < spalten; j++)
-                {
-                    var index = i * zeilen + j;
+                    if (x != 0)
+                    {
+                        knot.West = Graph[knot.Index - 1];
+                        knot.West.East = knot;
+                    }
 
-                    if (i != 0)
-                        Graph[index].North = Graph[index - zeilen];
-
-                    if (i != zeilen - 1)
-                        Graph[index].South = Graph[index + zeilen];
-
-                    if (j != 0)
-                        Graph[index].West = Graph[index - 1];
-
-                    if (j != spalten - 1)
-                        Graph[index].East = Graph[index + 1];
+                    if (y != 0)
+                    {
+                        knot.North = Graph[knot.Index - width];
+                        knot.North.South = knot;
+                    }
                 }
             }
         }
@@ -446,8 +438,8 @@ namespace WindowsFormsApp2
         {
             var p = new Point();
 
-            var x = index / zeilen;
-            var y = index % zeilen;
+            var x = index % width;
+            var y = index / width;
 
             p.X = x + middleX + (pointDistance * (x-centreOfGraph.X));
             p.Y = y + middleY + (pointDistance * (y-centreOfGraph.Y));
