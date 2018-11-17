@@ -152,6 +152,8 @@ namespace WindowsFormsApp2
                 knoten.Pred = best;
                 knoten.Distance = best.Distance + 1;
 
+                AdjustDistance(knoten);
+
                 return true;
             }
 
@@ -166,6 +168,8 @@ namespace WindowsFormsApp2
                 {
                     knoten.Pred = current;
                     knoten.Distance = current.Distance + 1;
+
+                    AdjustDistance(knoten);
 
                     return true;
                 }
