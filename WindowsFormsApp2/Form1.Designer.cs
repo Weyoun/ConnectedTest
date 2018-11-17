@@ -33,12 +33,14 @@
             // 
             // GraphView
             // 
-            this.GraphView.Location = new System.Drawing.Point(12, 12);
+            this.GraphView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.GraphView.Location = new System.Drawing.Point(0, 0);
             this.GraphView.Name = "GraphView";
-            this.GraphView.Size = new System.Drawing.Size(776, 426);
+            this.GraphView.Size = new System.Drawing.Size(800, 450);
             this.GraphView.TabIndex = 0;
             this.GraphView.Paint += new System.Windows.Forms.PaintEventHandler(this.GraphView_Paint);
             this.GraphView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.GraphView_MouseDown);
+            this.GraphView.Resize += new System.EventHandler(this.GraphView_Resize);
             // 
             // Form1
             // 

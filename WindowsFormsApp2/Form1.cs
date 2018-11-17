@@ -7,17 +7,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+
 namespace WindowsFormsApp2
 {
 
     public partial class Form1 : Form
     {
-        int zeilen = 5;
-        int spalten = 5;
+        int zeilen = 10;
+        int spalten = 10;
         Knoten[] Graph;
 
         int middleX, middleY;
         Point centreOfGraph;
+
+        private bool withLocation = false;
 
         public Form1()
         {
@@ -67,92 +70,88 @@ namespace WindowsFormsApp2
             if (Graph.TryGetAt(x, y, zeilen, out Knoten knoten))
             {
                 knoten.Distance = -1;
+                knoten.RemoveLinks();
 
-                if (knoten.North != null)
+                if (knoten.North != null && knoten.North.Pred == knoten)
                 {
-                    knoten.North.South = null;
-
-                    if (knoten.North.Pred == knoten)
-                        Recalculate(knoten.North);
+                    Recalculate(knoten.North);
                 }
 
-                if (knoten.East != null)
+                if (knoten.East != null && knoten.East.Pred == knoten)
                 {
-                    knoten.East.West = null;
-
-                    if (knoten.East.Pred == knoten)
-                        Recalculate(knoten.East);
+                    Recalculate(knoten.East);
                 }
 
-                if (knoten.South != null)
+                if (knoten.South != null && knoten.South.Pred == knoten)
                 {
-                    knoten.South.North = null;
-
-                    if (knoten.South.Pred == knoten)
-                        Recalculate(knoten.South);
+                    Recalculate(knoten.South);
                 }
 
-                if (knoten.West != null)
+                if (knoten.West != null && knoten.West.Pred == knoten)
                 {
-                    knoten.West.East = null;
-
-                    if (knoten.West.Pred == knoten)
-                        Recalculate(knoten.West);
+                    Recalculate(knoten.West);
                 }
             }
         }
 
         private void Recalculate(Knoten knoten)
         {
-            var distance = int.MaxValue;
-            Knoten pred = null;
-            List<Knoten> possible = new List<Knoten>();
+            var circle = new List<Knoten>();
 
-            CheckNeighbor(knoten.North, knoten, possible, ref distance, ref pred);
-            CheckNeighbor(knoten.East, knoten, possible, ref distance, ref pred);
-            CheckNeighbor(knoten.South, knoten, possible, ref distance, ref pred);
-            CheckNeighbor(knoten.West, knoten, possible, ref distance, ref pred);
-
-
-            if (pred != null)
-            {
-                knoten.Pred = pred;
-                knoten.Distance = distance + 1;
-
-                AdjustDistance(knoten);
-            }
-            else if (possible.Count > 0)
-            {
-                possible.Sort();
-                List<Knoten> circle = new List<Knoten>();
-                circle.Add(knoten);
-
-                do
-                {
-                    var node = possible.Pop();
-
-
-                    if (RecalculateRecursive(node, circle))
-                    {
-                        knoten.Pred = node;
-                        knoten.Distance = node.Distance + 1;
-
-                        AdjustDistance(knoten);
-
-                        return;
-                    }
-
-                } while (possible.Count > 0);
-
-                // Wir sind wohl Disconnected
-                knoten.Pred = null;
-                SetDisconnected(knoten);
-            }
-            else
+            if (!RecalculateRecursive(knoten, circle))
             {
                 knoten.Pred = null;
                 SetDisconnected(knoten);
             }
+
+            //var distance = int.MaxValue;
+            //Knoten pred = null;
+            //List<Knoten> possible = new List<Knoten>();
+
+            //CheckNeighbor(knoten.North, knoten, possible, ref distance, ref pred);
+            //CheckNeighbor(knoten.East, knoten, possible, ref distance, ref pred);
+            //CheckNeighbor(knoten.South, knoten, possible, ref distance, ref pred);
+            //CheckNeighbor(knoten.West, knoten, possible, ref distance, ref pred);
+
+
+            //if (pred != null)
+            //{
+            //    knoten.Pred = pred;
+            //    knoten.Distance = distance + 1;
+
+            //    AdjustDistance(knoten);
+            //}
+            //else if (possible.Count > 0)
+            //{
+            //    possible.Sort();
+            //    List<Knoten> circle = new List<Knoten>();
+            //    circle.Add(knoten);
+
+            //    do
+            //    {
+            //        var node = possible.Pop();
+
+            //        if (RecalculateRecursive(node, circle))
+            //        {
+            //            knoten.Pred = node;
+            //            knoten.Distance = node.Distance + 1;
+
+            //            //AdjustDistance(knoten);
+
+            //            return;
+            //        }
+
+            //    } while (possible.Count > 0);
+
+            //    // Wir sind wohl Disconnected
+            //    knoten.Pred = null;
+            //    SetDisconnected(knoten);
+            //}
+            //else
+            //{
+            //    knoten.Pred = null;
+            //    SetDisconnected(knoten);
+            //}
         }
 
         private void SetDisconnected(Knoten knoten)
@@ -167,6 +166,9 @@ namespace WindowsFormsApp2
 
         private void AdjustDistance(Knoten knoten)
         {
+            if (knoten == null)
+                return;
+
             foreach (var succ in knoten.GetSuccessor())
             {
                 succ.Distance = knoten.Distance + 1;
@@ -177,37 +179,60 @@ namespace WindowsFormsApp2
         private bool RecalculateRecursive(Knoten knoten, List<Knoten> circle)
         {
             circle.Add(knoten);
-            var foo = knoten.GetNeighbors(circle);
+            var foo = knoten.GetNeighbors(circle).Where(x => !circle.Contains(x.Pred)).ToList();
+            foo.Sort();
 
-            if (foo.Count == 0)
+            while  (foo.Count > 0)
             {
-                var succ = knoten.GetSuccessor();
+                var best = foo.Pop();
 
-                while (succ.Count > 0)
-                {
-                    var current = succ.Pop();
-
-                    if (RecalculateRecursive(current, circle))
-                    {
-                        knoten.Pred = current;
-                        knoten.Distance = current.Distance + 1;
-
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            else
-            {
-                foo.Sort();
-                var best = foo.First();
+                if (IsCricle(best.Pred, circle))
+                    continue;
 
                 knoten.Pred = best;
                 knoten.Distance = best.Distance + 1;
+
+                return true;
             }
 
-            return true;
+            var succ = knoten.GetSuccessor().Where(x => !circle.Contains(x)).ToList();
+            succ.Sort();
+
+            while (succ.Count > 0)
+            {
+                var current = succ.Pop();
+
+                if (RecalculateRecursive(current, new List<Knoten>(circle)))
+                {
+                    knoten.Pred = current;
+                    knoten.Distance = current.Distance + 1;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsCricle(Knoten current, List<Knoten> list)
+        {
+            if (current == null)
+                return false;
+
+            do
+            {
+                if (list.Contains(current))
+                    return true;
+
+                current = current.Pred;
+            } while (current != null);
+
+            return false;
+        }
+
+        private bool CheckCircle(Knoten knoten, List<Knoten> circle)
+        {
+            return !circle.Contains(knoten);
         }
 
         private void CheckNeighbor(Knoten other, Knoten me, List<Knoten> set, ref int dist, ref Knoten pred)
@@ -273,6 +298,7 @@ namespace WindowsFormsApp2
         {
             DrawDots();
             DrawPred();
+            //DrawNeighbors();
         }
 
         private void DrawPred()
@@ -327,6 +353,61 @@ namespace WindowsFormsApp2
             }
         }
 
+        private void DrawNeighbors()
+        {
+            var g = GraphView.CreateGraphics();
+
+            var p = new Pen(Color.Blue, 3);
+            p.EndCap = System.Drawing.Drawing2D.LineCap.ArrowAnchor;
+
+            for (int i = 0; i < Graph.Length; i++)
+            {
+                if (Graph[i] == null)
+                    continue;
+
+                foreach (var pred in Graph[i].GetAllNeighbors())
+                {
+                    var pointS = IndexToPoint(i);
+                    var pointE = IndexToPoint(pred.Index);
+
+                    int startX, startY, endX, endY;
+
+                    if (pointS.Y == pointE.Y)
+                    {
+                        if (pointS.X > pointE.X)
+                        {
+                            startY = pointS.X - pointRadius;
+                            endY = pointE.X + pointRadius;
+                            startX = endX = pointS.Y;
+                        }
+                        else
+                        {
+                            startY = pointS.X + pointRadius;
+                            endY = pointE.X - pointRadius;
+                            startX = endX = pointS.Y;
+                        }
+                    }
+                    else
+                    {
+                        if (pointS.Y > pointE.Y)
+                        {
+                            startX = pointS.Y - pointRadius;
+                            endX = pointE.Y + pointRadius;
+                            startY = endY = pointS.X;
+                        }
+                        else
+                        {
+                            startX = pointS.Y + pointRadius;
+                            endX = pointE.Y - pointRadius;
+                            startY = endY = pointS.X;
+                        }
+                    }
+
+                    g.DrawLine(p, startY, startX, endY, endX);
+                }
+            }
+        }
+
         private void DrawDots()
         {
             var g = GraphView.CreateGraphics();
@@ -346,7 +427,15 @@ namespace WindowsFormsApp2
 
                 g.DrawEllipse(p, x, y, 2* pointRadius, 2* pointRadius);
                 g.FillEllipse(sb, x, y, 2* pointRadius, 2* pointRadius);
-                g.DrawString(Graph[i].Distance.ToString(), Font, sb, new Point(point.X + 3, point.Y + 3));
+
+                if (!withLocation)
+                {
+                    g.DrawString(Graph[i].Distance.ToString(), Font, sb, new Point(point.X + 3, point.Y + 3));
+                }
+                else
+                {
+                    g.DrawString(Graph[i].Distance.ToString() + "@(" + Graph[i].ToString() + ")", Font, sb, new Point(point.X + 3, point.Y + 3));
+                }
             }
         }
 
@@ -364,6 +453,13 @@ namespace WindowsFormsApp2
             p.Y = y + middleY + (pointDistance * (y-centreOfGraph.Y));
 
             return p;
+        }
+
+        private void GraphView_Resize(object sender, EventArgs e)
+        {
+            middleX = GraphView.Size.Width / 2;
+            middleY = GraphView.Size.Height / 2;
+            GraphView.Invalidate();
         }
 
         private Point PointToIndex(int x, int y)

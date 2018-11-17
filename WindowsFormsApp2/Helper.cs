@@ -98,6 +98,21 @@ namespace WindowsFormsApp2
             if (knoten != null && knoten.Distance >= 0)
                 add.Add(knoten);
         }
+
+        public void RemoveLinks()
+        {
+            if (North != null)
+                North.South = null;
+
+            if (East != null)
+                East.West = null;
+
+            if (South != null)
+                South.North = null;
+
+            if (West != null)
+                West.East = null;
+        }
     }
 
     internal class KnotenComparer : IComparer<Knoten>
