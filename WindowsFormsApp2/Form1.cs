@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -211,7 +211,7 @@ namespace WindowsFormsApp2
             {
                 var current = succ.Pop();
 
-                if (RecalculateRecursive(current, new List<Knoten>(circle)))
+                if (RecalculateRecursive(current, circle))
                 {
                     knoten.Pred = current;
                     knoten.Distance = current.Distance + 1;
