@@ -20,6 +20,8 @@ namespace WindowsFormsApp2
         int middleX, middleY;
         Point centreOfGraph;
 
+        int recalculating, checkCircle;
+
         private bool withLocation = false;
 
         public Form1()
@@ -71,6 +73,9 @@ namespace WindowsFormsApp2
             {
                 knoten.Distance = -1;
                 knoten.RemoveLinks();
+
+                recalculating = 0;
+                checkCircle = 0;
 
                 if (knoten.North != null && knoten.North.Pred == knoten)
                 {
@@ -178,6 +183,8 @@ namespace WindowsFormsApp2
 
         private bool RecalculateRecursive(Knoten knoten, List<Knoten> circle)
         {
+            recalculating++;
+
             circle.Add(knoten);
             var foo = knoten.GetNeighbors(circle).Where(x => !circle.Contains(x.Pred)).ToList();
             foo.Sort();
@@ -221,6 +228,8 @@ namespace WindowsFormsApp2
 
             do
             {
+                checkCircle++;
+
                 if (list.Contains(current))
                     return true;
 
@@ -291,6 +300,16 @@ namespace WindowsFormsApp2
             DrawDots();
             DrawPred();
             //DrawNeighbors();
+            DrawStatistics();
+        }
+
+        private void DrawStatistics()
+        {
+            var g = GraphView.CreateGraphics();
+
+            var sb = new SolidBrush(Color.Black);
+
+            g.DrawString("Recalculating: " + recalculating.ToString() + "\nCheck Circle: " + checkCircle.ToString(), Font, sb, new Point(3, 3));
         }
 
         private void DrawPred()
