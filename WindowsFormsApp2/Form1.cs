@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace WindowsFormsApp2
 {
@@ -21,6 +22,7 @@ namespace WindowsFormsApp2
         Point centreOfGraph;
 
         int recalculating, checkCircle;
+        Stopwatch stopWatch = new Stopwatch();
 
         private bool withLocation = false;
 
@@ -290,7 +292,11 @@ namespace WindowsFormsApp2
         {
             var p = PointToIndex(e.X, e.Y);
 
+            stopWatch = Stopwatch.StartNew();
+
             RemoveAt(p.X, p.Y);
+
+            stopWatch.Stop();
 
             GraphView.Invalidate();
         }
@@ -309,7 +315,9 @@ namespace WindowsFormsApp2
 
             var sb = new SolidBrush(Color.Black);
 
-            g.DrawString("Recalculating: " + recalculating.ToString() + "\nCheck Circle: " + checkCircle.ToString(), Font, sb, new Point(3, 3));
+            var str = $"Recalculating: {recalculating}\nCheck Circle: {checkCircle}\nTime: {stopWatch.Elapsed}";
+
+            g.DrawString(str, Font, sb, new Point(3, 3));
         }
 
         private void DrawPred()
