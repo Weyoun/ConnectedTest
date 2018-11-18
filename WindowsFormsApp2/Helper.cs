@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,11 +28,6 @@ namespace WindowsFormsApp2
             Pred = null;
             Distance = 0;
         }
-
-        //public override string ToString()
-        //{
-        //    return @"Knoten an Stelle (${X}, ${Y}) mit Distanz ${Distance} und Vorgänger bei (${Pred.X}, ${Pred.Y})";
-        //}
 
         public override string ToString()
         {
@@ -76,7 +71,7 @@ namespace WindowsFormsApp2
 
         private void AddToNeighbors(List<Knoten> add, Knoten knoten, HashSet<Knoten> check)
         {
-            if (knoten != null && knoten.Pred != this && !check.Contains(knoten))
+            if (knoten != null && knoten.Pred != this && !check.Contains(knoten) && !check.Contains(knoten.Pred))
                 add.Add(knoten);
         }
 

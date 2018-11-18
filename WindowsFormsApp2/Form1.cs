@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -143,7 +143,7 @@ namespace WindowsFormsApp2
             recalculating++;
 
             circle.Add(knoten);
-            var neigh = knoten.GetNeighbors(circle).Where(x => !circle.Contains(x.Pred)).ToList();
+            var neigh = knoten.GetNeighbors(circle);
             neigh.Sort();
 
             while  (neigh.Count > 0)
