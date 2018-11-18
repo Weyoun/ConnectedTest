@@ -110,6 +110,10 @@ namespace WindowsFormsApp2
                 knoten.Pred = null;
                 SetDisconnected(knoten);
             }
+            else
+            {
+                AdjustDistance(knoten);
+            }
         }
 
         private void SetDisconnected(Knoten knoten)
@@ -139,20 +143,18 @@ namespace WindowsFormsApp2
             recalculating++;
 
             circle.Add(knoten);
-            var foo = knoten.GetNeighbors(circle).Where(x => !circle.Contains(x.Pred)).ToList();
-            foo.Sort();
+            var neigh = knoten.GetNeighbors(circle).Where(x => !circle.Contains(x.Pred)).ToList();
+            neigh.Sort();
 
-            while  (foo.Count > 0)
+            while  (neigh.Count > 0)
             {
-                var best = foo.Pop();
+                var best = neigh.Pop();
 
                 if (IsCricle(best.Pred, circle))
                     continue;
 
                 knoten.Pred = best;
                 knoten.Distance = best.Distance + 1;
-
-                AdjustDistance(knoten);
 
                 return true;
             }
@@ -168,8 +170,6 @@ namespace WindowsFormsApp2
                 {
                     knoten.Pred = current;
                     knoten.Distance = current.Distance + 1;
-
-                    AdjustDistance(knoten);
 
                     return true;
                 }
