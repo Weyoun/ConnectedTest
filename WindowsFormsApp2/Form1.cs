@@ -14,9 +14,123 @@ namespace WindowsFormsApp2
 
     public partial class Form1 : Form
     {
+
+        #region InternalClasses
+        [Flags]
+        enum CellType : byte
+        {
+            North = 1 << 0,
+            East = 1 << 1,
+            South = 1 << 2,
+            West = 1 << 3
+        }
+
+        class ShipCell
+        {
+            readonly ShipCell[] neighbors;
+            readonly int x, y, width;
+            public CellType CellType { get; private set; }
+            public bool Disconnected { get; set; }
+
+            static readonly int north = 0, east = 1, south = 2, west = 3;
+
+            public int Index { get; private set; }
+            public ShipCell Pred { get; set; }
+
+            public ShipCell(int x, int y, int width, CellType type)
+            {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.CellType = type;
+                Index = y * width + x;
+                neighbors = new ShipCell[4];
+            }
+
+            public void UnlinkNeighbors()
+            {
+                if ((CellType & CellType.North) != 0)
+                    neighbors[north].UnlinkFromNeighbor(CellType.South);
+
+                if ((CellType & CellType.East) != 0)
+                    neighbors[east].UnlinkFromNeighbor(CellType.West);
+
+                if ((CellType & CellType.South) != 0)
+                    neighbors[south].UnlinkFromNeighbor(CellType.North);
+
+                if ((CellType & CellType.West) != 0)
+                    neighbors[west].UnlinkFromNeighbor(CellType.East);
+            }
+
+            public void UnlinkFromNeighbor(CellType type)
+            {
+                switch (type)
+                {
+                    case CellType.North:
+                        neighbors[north] = null;
+                        CellType ^= CellType.North;
+                        break;
+                    case CellType.East:
+                        neighbors[east] = null;
+                        CellType ^= CellType.East;
+                        break;
+                    case CellType.South:
+                        neighbors[south] = null;
+                        CellType ^= CellType.South;
+                        break;
+                    case CellType.West:
+                        neighbors[west] = null;
+                        CellType ^= CellType.West;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            public void SetNeighbor(CellType type, ShipCell cell)
+            {
+                switch (type)
+                {
+                    case CellType.North:
+                        neighbors[north] = cell;
+                        break;
+                    case CellType.East:
+                        neighbors[east] = cell;
+                        break;
+                    case CellType.South:
+                        neighbors[south] = cell;
+                        break;
+                    case CellType.West:
+                        neighbors[west] = cell;
+                        break;
+                }
+            }
+
+            public IEnumerable<ShipCell> GetSuccessors()
+            {
+                return neighbors.Where(x => x != null && x.Pred == this);
+            }
+
+            public IEnumerable<ShipCell> GetSuccessors(HashSet<ShipCell> circle)
+            {
+                return neighbors.Where(x => x != null && x.Pred == this && !circle.Contains(x));
+            }
+
+            public IEnumerable<ShipCell> GetNotSuccessors(HashSet<ShipCell> circle)
+            {
+                return neighbors.Where(x => x != null && x.Pred != this && !circle.Contains(x) && !circle.Contains(x.Pred));
+            }
+
+            public IEnumerable<ShipCell> GetNeighbors()
+            {
+                return neighbors.Where(x => x != null);
+            }
+        }
+        #endregion
+
         int width = 9;
         int height = 9;
-        Knoten[] Graph;
+        ShipCell[] cells;
 
         int middleX, middleY;
         Point centreOfGraph;
@@ -32,144 +146,116 @@ namespace WindowsFormsApp2
             Init();
 
             centreOfGraph = new Point(width / 2, height / 2);
-            CalculateDistance(centreOfGraph.X, centreOfGraph.Y);
+            CalculateSpawningTree(centreOfGraph.X, centreOfGraph.Y);
 
             middleX = GraphView.Size.Width / 2;
             middleY = GraphView.Size.Height / 2;
         }
 
-        private void CalculateDistance(int x, int y)
+        void CalculateSpawningTree(int x, int y)
         {
-            Queue<Knoten> toCheck = new Queue<Knoten>();
-            HashSet<Knoten> added = new HashSet<Knoten>();
+            Queue<ShipCell> toCheck = new Queue<ShipCell>();
+            HashSet<ShipCell> added = new HashSet<ShipCell>();
 
-            toCheck.Enqueue(Graph[y * width + x]);
+            toCheck.Enqueue(cells[y * width + x]);
 
             while (toCheck.Count > 0)
             {
                 var current = toCheck.Dequeue();
 
-                CheckNeighbor(current.North, current, toCheck, added);
-                CheckNeighbor(current.East, current, toCheck, added);
-                CheckNeighbor(current.South, current, toCheck, added);
-                CheckNeighbor(current.West, current, toCheck, added);
+                foreach (var neighbor in current.GetNeighbors())
+                {
+                    if (toCheck.Contains(neighbor) || added.Contains(neighbor))
+                        continue;
+
+                    neighbor.Pred = current;
+                    toCheck.Enqueue(neighbor);
+                }
 
                 added.Add(current);
             }
         }
 
-        private void CheckNeighbor(Knoten node, Knoten me, Queue<Knoten> queue, HashSet<Knoten> hashSet)
+        public bool CheckHit(uint x, uint y)
         {
-            if (node != null && !queue.Contains(node) && !hashSet.Contains(node))
+            var index = y * width + x;
+
+            if (index > cells.Length)
+                return false;
+
+            var cell = cells[index];
+
+            if (cell == null)
+                return false;
+
+            cell.UnlinkNeighbors();
+            cells[index] = null;
+
+            var hasWreck = false;
+
+            foreach (var succ in cell.GetSuccessors())
             {
-                node.Pred = me;
-                node.Distance = me.Distance + 1;
-                queue.Enqueue(node);
-            }
-        }
-
-        private void RemoveAt(int x, int y)
-        {
-
-            if (Graph.TryGetAt(x, y, width, out Knoten knoten))
-            {
-                knoten.Distance = -1;
-                knoten.RemoveLinks();
-
-                recalculating = 0;
-                checkCircle = 0;
-
-                if (knoten.North != null && knoten.North.Pred == knoten)
+                if (Recalculate(succ))
                 {
-                    Recalculate(knoten.North);
-                }
-
-                if (knoten.East != null && knoten.East.Pred == knoten)
-                {
-                    Recalculate(knoten.East);
-                }
-
-                if (knoten.South != null && knoten.South.Pred == knoten)
-                {
-                    Recalculate(knoten.South);
-                }
-
-                if (knoten.West != null && knoten.West.Pred == knoten)
-                {
-                    Recalculate(knoten.West);
+                    hasWreck = true;
                 }
             }
+
+            return hasWreck;
         }
 
-        private void Recalculate(Knoten knoten)
+        bool Recalculate(ShipCell cell)
         {
-            var circle = new HashSet<Knoten>(10);
+            var circle = new HashSet<ShipCell>();
 
-            if (!RecalculateRecursive(knoten, circle))
+            if (!RecalculateRecursive(cell, circle))
             {
-                knoten.Pred = null;
-                SetDisconnected(knoten);
-            }
-            else
-            {
-                AdjustDistance(knoten);
-            }
-        }
+                cell.Pred = null;
 
-        private void SetDisconnected(Knoten knoten)
-        {
-            knoten.Distance = -2;
-
-            foreach (var other in knoten.GetAllNeighbors())
-            {
-                SetDisconnected(other);
-            }
-        }
-
-        private void AdjustDistance(Knoten knoten)
-        {
-            if (knoten == null)
-                return;
-
-            foreach (var succ in knoten.GetSuccessor())
-            {
-                succ.Distance = knoten.Distance + 1;
-                AdjustDistance(succ);
-            }
-        }
-
-        private bool RecalculateRecursive(Knoten knoten, HashSet<Knoten> circle)
-        {
-            recalculating++;
-
-            circle.Add(knoten);
-            var neigh = knoten.GetNeighbors(circle);
-            neigh.Sort();
-
-            while  (neigh.Count > 0)
-            {
-                var best = neigh.Pop();
-
-                if (IsCricle(best.Pred, circle))
-                    continue;
-
-                knoten.Pred = best;
-                knoten.Distance = best.Distance + 1;
+                SetDisconnected(cell);
 
                 return true;
             }
 
-            var succ = knoten.GetSuccessor().Where(x => !circle.Contains(x)).ToList();
-            succ.Sort();
+            return false;
+        }
 
-            while (succ.Count > 0)
+        private void SetDisconnected(ShipCell knoten)
+        {
+            knoten.Disconnected = true;
+
+            foreach (var other in knoten.GetNeighbors())
             {
-                var current = succ.Pop();
+                if (other.Disconnected)
+                    continue;
 
-                if (RecalculateRecursive(current, circle))
+                SetDisconnected(other);
+            }
+        }
+
+        bool RecalculateRecursive(ShipCell cell, HashSet<ShipCell> circle)
+        {
+            circle.Add(cell);
+
+            var neigh = cell.GetNotSuccessors(circle);
+
+            foreach (var best in neigh)
+            {
+                if (IsCircle(best.Pred, circle))
+                    continue;
+
+                cell.Pred = best;
+
+                return true;
+            }
+
+            var succ = cell.GetSuccessors(circle);
+
+            foreach (var best in succ)
+            {
+                if (RecalculateRecursive(best, circle))
                 {
-                    knoten.Pred = current;
-                    knoten.Distance = current.Distance + 1;
+                    cell.Pred = best;
 
                     return true;
                 }
@@ -178,16 +264,14 @@ namespace WindowsFormsApp2
             return false;
         }
 
-        private bool IsCricle(Knoten current, HashSet<Knoten> list)
+        bool IsCircle(ShipCell current, HashSet<ShipCell> circle)
         {
             if (current == null)
                 return false;
 
             do
             {
-                checkCircle++;
-
-                if (list.Contains(current))
+                if (circle.Contains(current))
                     return true;
 
                 current = current.Pred;
@@ -196,50 +280,52 @@ namespace WindowsFormsApp2
             return false;
         }
 
-        private bool CheckCircle(Knoten knoten, List<Knoten> circle)
-        {
-            return !circle.Contains(knoten);
-        }
-
-        private void CheckNeighbor(Knoten other, Knoten me, List<Knoten> set, ref int dist, ref Knoten pred)
-        {
-            if (other == null)
-                return;
-
-            if (other.Pred == me)
-            {
-                set.Add(other);
-            }
-            else if (other.Distance >= 0 && other.Distance < dist)
-            {
-                pred = other;
-                dist = other.Distance;
-            }
-        }
-
         private void Init()
         {
-            Graph = new Knoten[width*height];
+            cells = new ShipCell[width*height];
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    var knot = new Knoten(x, y, width);
-                    Graph[knot.Index] = knot;
-
-                    if (x != 0)
-                    {
-                        knot.West = Graph[knot.Index - 1];
-                        knot.West.East = knot;
-                    }
+                    CellType type = 0;
 
                     if (y != 0)
-                    {
-                        knot.North = Graph[knot.Index - width];
-                        knot.North.South = knot;
-                    }
+                        type |= CellType.North;
+
+                    if (y != height - 1)
+                        type |= CellType.South;
+
+                    if (x != 0)
+                        type |= CellType.West;
+
+                    if (x != width - 1)
+                        type |= CellType.East;
+
+                    var cell = new ShipCell(x, y, width, type);
+                    cells[cell.Index] = cell;
+
+                    SetNeighbors(cell);
                 }
+            }
+        }
+
+        void SetNeighbors(ShipCell cell)
+        {
+            if ((cell.CellType & CellType.North) != 0)
+            {
+                var other = cells[cell.Index - width];
+
+                cell.SetNeighbor(CellType.North, other);
+                other.SetNeighbor(CellType.South, cell);
+            }
+
+            if ((cell.CellType & CellType.West) != 0)
+            {
+                var other = cells[cell.Index - 1];
+
+                cell.SetNeighbor(CellType.West, other);
+                other.SetNeighbor(CellType.East, cell);
             }
         }
 
@@ -249,7 +335,7 @@ namespace WindowsFormsApp2
 
             stopWatch = Stopwatch.StartNew();
 
-            RemoveAt(p.X, p.Y);
+            CheckHit((uint)p.X, (uint)p.Y);
 
             stopWatch.Stop();
 
@@ -261,7 +347,7 @@ namespace WindowsFormsApp2
             DrawDots();
             DrawPred();
             //DrawNeighbors();
-            DrawStatistics();
+            //DrawStatistics();
         }
 
         private void DrawStatistics()
@@ -282,9 +368,14 @@ namespace WindowsFormsApp2
             var p = new Pen(Color.Green,3);
             p.EndCap = System.Drawing.Drawing2D.LineCap.ArrowAnchor;
 
-            for (int i = 0; i < Graph.Length; i++)
+            for (int i = 0; i < cells.Length; i++)
             {
-                if (Graph[i] == null || !Graph[i].TryGetPred(out Knoten pred))
+                if (cells[i] == null)
+                    continue;
+
+                ShipCell pred = cells[i].Pred;
+
+                if (pred == null)
                     continue;
 
                 var pointS = IndexToPoint(i);
@@ -334,12 +425,12 @@ namespace WindowsFormsApp2
             var p = new Pen(Color.Blue, 3);
             p.EndCap = System.Drawing.Drawing2D.LineCap.ArrowAnchor;
 
-            for (int i = 0; i < Graph.Length; i++)
+            for (int i = 0; i < cells.Length; i++)
             {
-                if (Graph[i] == null)
+                if (cells[i] == null)
                     continue;
 
-                foreach (var pred in Graph[i].GetAllNeighbors())
+                foreach (var pred in cells[i].GetNeighbors())
                 {
                     var pointS = IndexToPoint(i);
                     var pointE = IndexToPoint(pred.Index);
@@ -386,12 +477,15 @@ namespace WindowsFormsApp2
         {
             var g = GraphView.CreateGraphics();
 
-            var sb = new SolidBrush(Color.Black);
-            var p = new Pen(Color.Black);
+            var sbB = new SolidBrush(Color.Black);
+            var pB = new Pen(Color.Black);
 
-            for (int i = 0; i < Graph.Length; i++)
+            var sbR = new SolidBrush(Color.Red);
+            var pR = new Pen(Color.Red);
+
+            for (int i = 0; i < cells.Length; i++)
             {
-                if (Graph[i] == null)
+                if (cells[i] == null)
                     continue;
 
                 var point = IndexToPoint(i);
@@ -399,17 +493,25 @@ namespace WindowsFormsApp2
                 var x = point.X - pointRadius;
                 var y = point.Y - pointRadius;
 
-                g.DrawEllipse(p, x, y, 2* pointRadius, 2* pointRadius);
-                g.FillEllipse(sb, x, y, 2* pointRadius, 2* pointRadius);
-
-                if (!withLocation)
+                if (cells[i].Disconnected)
                 {
-                    g.DrawString(Graph[i].Distance.ToString(), Font, sb, new Point(point.X + 3, point.Y + 3));
+                    g.DrawEllipse(pR, x, y, 2 * pointRadius, 2 * pointRadius);
+                    g.FillEllipse(sbR, x, y, 2 * pointRadius, 2 * pointRadius);
                 }
                 else
                 {
-                    g.DrawString(Graph[i].Distance.ToString() + "@(" + Graph[i].ToString() + ")", Font, sb, new Point(point.X + 3, point.Y + 3));
+                    g.DrawEllipse(pB, x, y, 2 * pointRadius, 2 * pointRadius);
+                    g.FillEllipse(sbB, x, y, 2 * pointRadius, 2 * pointRadius);
                 }
+
+                //if (!withLocation)
+                //{
+                //    g.DrawString(cells[i].Distance.ToString(), Font, sb, new Point(point.X + 3, point.Y + 3));
+                //}
+                //else
+                //{
+                //    g.DrawString(cells[i].Distance.ToString() + "@(" + cells[i].ToString() + ")", Font, sb, new Point(point.X + 3, point.Y + 3));
+                //}
             }
         }
 
